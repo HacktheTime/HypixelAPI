@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 public class HypixelAPI {
     static final String BASE_URL = "https://api.hypixel.net/v2/";
 
-    private final HypixelHttpClient httpClient;
+    protected final HypixelHttpClient httpClient;
 
     /**
      * @param httpClient a {@link HypixelHttpClient} that implements the HTTP behaviour for communicating with the API
@@ -319,11 +319,11 @@ public class HypixelAPI {
         });
     }
 
-    private <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request) {
+    protected  <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request) {
         return get(authenticated, clazz, request, null);
     }
 
-    private <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request, HTTPQueryParams params) {
+    protected <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request, HTTPQueryParams params) {
         String url = BASE_URL + request;
         if (params != null) {
             url = params.getAsQueryString(url);
@@ -346,7 +346,7 @@ public class HypixelAPI {
                 });
     }
 
-    private CompletableFuture<ResourceReply> requestResource(String resource) {
+    protected CompletableFuture<ResourceReply> requestResource(String resource) {
         return httpClient.makeRequest(BASE_URL + "resources/" + resource)
                 .thenApply(this::checkResponse)
                 .thenApply(response -> checkReply(new ResourceReply(Utilities.GSON.fromJson(response.getBody(), JsonObject.class))));
@@ -355,7 +355,7 @@ public class HypixelAPI {
     /**
      * Checks the status of the response and throws an exception if needed
      */
-    private HypixelHttpResponse checkResponse(HypixelHttpResponse response) {
+    protected HypixelHttpResponse checkResponse(HypixelHttpResponse response) {
         if (response.getStatusCode() == 200) {
             return response;
         }
@@ -377,7 +377,7 @@ public class HypixelAPI {
      * @param <T>   The class of the reply
      * @return the same object that was provided for cleaner usage
      */
-    private <T extends AbstractReply> T checkReply(T reply) {
+    protected <T extends AbstractReply> T checkReply(T reply) {
         if (reply != null) {
             if (!reply.isSuccess()) {
                 throw new BadResponseException(reply.getCause());
