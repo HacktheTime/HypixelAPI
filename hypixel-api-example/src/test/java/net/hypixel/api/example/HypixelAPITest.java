@@ -14,6 +14,8 @@ import org.mockito.Mockito;
 import javax.swing.*;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,7 +30,7 @@ public class HypixelAPITest {
     public void setUp() {
         httpClient = Mockito.mock(ReactorHttpClient.class, withSettings().useConstructor(UUID.fromString(getKey())).defaultAnswer(CALLS_REAL_METHODS));
         hypixelAPI = new HypixelAPI(httpClient, 60);
-        cache = new Cache<>(60, 100);
+        cache = new Cache<>(60, new ScheduledThreadPoolExecutor(100),10, TimeUnit.MINUTES,10,TimeUnit.MINUTES,100);
     }
 
     @Test

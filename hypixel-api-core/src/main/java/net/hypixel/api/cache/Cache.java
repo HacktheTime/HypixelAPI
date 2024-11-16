@@ -42,7 +42,7 @@ public class Cache<K, V> {
 
 
     public void put(K key, V value) {
-        put(key, value);
+        cache.put(key, new CacheEntry<>(value));
     }
 
     public V get(K key, long maxCacheTime) {
