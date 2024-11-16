@@ -15,3 +15,45 @@ For more details check the Java Doc of the HypixelAPI class.
 You can also customize the Cache in the detailed constructor of the HypixelAPI class.
 
 Keep in mind that the examples are for the official Hypixel API and I did not update them. I did extremely minimal changes but they can be neglected.
+
+
+How to include:
+Maven
+```maven
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.github.HacktheTime</groupId>
+        <artifactId>HypixelAPI</artifactId>
+        <version>cache-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+```
+
+Gradle
+```gradle
+repositories {
+maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+implementation 'com.github.HacktheTime:HypixelAPI:cache-SNAPSHOT'
+}
+```
+
+Gradle Kotlin
+```gradle-kotlin
+repositories {
+maven("https://jitpack.io")
+}
+
+dependencies {
+implementation("com.github.HacktheTime:HypixelAPI:cache-SNAPSHOT")
+}
+```
