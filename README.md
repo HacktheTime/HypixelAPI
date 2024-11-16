@@ -1,61 +1,17 @@
-Hypixel Public API (Java)
-======
-[![Maven Package](https://github.com/HypixelDev/PublicAPI/actions/workflows/maven.yml/badge.svg)](https://github.com/HypixelDev/PublicAPI/actions/workflows/maven.yml)
+This is a fork from Hypixel Public API https://github.com/HypixelDev/PublicAPI
 
-This is a Java implementation of the Hypixel API. For discussing the API, requesting help or suggestions you can use the
-GitHub [Discussions](https://github.com/HypixelDev/PublicAPI/discussions).
+I am lazy too so dont have high expectations. If you want to contribute feel free to make a pull request.
 
-### Documentation
+I did everything I needed and not in the sake of completion. If you need sth you are not unlikely to need to implement it yourself. If you think it is beneficial to the public make a Pull Request and I will probably merge it in. This Project just removed a bit of the hastle needing to implement the Full Cache System.
 
-Hypixel Public API documentation can be found at [https://api.hypixel.net/](https://api.hypixel.net/). Java
-documentation can be found in the code.
+I made everything mainly of how I needed it, while trying to make modifications possible by making key methods protected instead of private. (Other than the offical API)
 
-### GitHub Issues
+This Repo also has Museum and Garden API support which the Public API is lacking as of typing this.
 
-GitHub issues should only be used to report bugs. Everything else should either be in GitHub discussions or use the
-Hypixel [Code Creations](https://hypixel.net/forums/code-creations.65/) forum.
+This Repo also has a cache built in. This means that if you request the same data twice in a short amount of time, it will return the cached data instead of making a new request. This is to align the requests to Hypixel API Developer Policies.
 
-### Usage
+For more details check the Java Doc of the HypixelAPI class.
 
-You can use this API as a dependency via the public Hypixel maven repo. You can also use
-the [Example Code](https://github.com/HypixelDev/PublicAPI/tree/master/hypixel-api-example) as a good starting point.
+You can also customize the Cache in the detailed constructor of the HypixelAPI class.
 
-#### Hypixel Maven Repo
-
-```xml
-
-<repository>
-    <id>Hypixel</id>
-    <url>https://repo.hypixel.net/repository/Hypixel/</url>
-</repository>
-```
-
-This repo can also be used with Gradle.
-
-```gradle
-repositories {
-    maven { url 'https://repo.hypixel.net/repository/Hypixel/' }
-}
-```
-
-#### Transports
-
-We include three built-in options for communicating with the Hypixel API, you can include either of these or even
-include the core API directly and create your own instance of HypixelHTTPClient.
-
-* [Apache HttpClient Transport](hypixel-api-transport-apache/README.md)
-* [Unirest Java Transport](hypixel-api-transport-unirest/README.md)
-* [Project Reactor Transport](hypixel-api-transport-reactor/README.md) (automatic rate-limiting by default)
-
-### Dependencies
-
-The Hypixel API Core implementation has the following dependencies:
-
-* [Google Gson library - 2.10.1](https://mvnrepository.com/artifact/com.google.code.gson/gson)
-
-Transports will also have dependencies where required.
-
-### Contributing
-
-When contributing changes to the Java API please provide as much detail on the changes and the reasons for them. We will
-not accept changes that have no meaningful contribution to the project.
+Keep in mind that the examples are for the official Hypixel API and I did not update them. I did extremely minimal changes but they can be neglected.

@@ -2,6 +2,7 @@ package net.hypixel.api;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import net.hypixel.api.cache.Cache;
 import net.hypixel.api.exceptions.BadResponseException;
 import net.hypixel.api.exceptions.BadStatusCodeException;
 import net.hypixel.api.http.HTTPQueryParams;
@@ -13,347 +14,566 @@ import net.hypixel.api.reply.*;
 import net.hypixel.api.reply.skyblock.*;
 import net.hypixel.api.reply.skyblock.bingo.SkyBlockBingoDataReply;
 import net.hypixel.api.reply.skyblock.firesales.SkyBlockFireSalesReply;
-import net.hypixel.api.util.PropertyFilter;
 import net.hypixel.api.util.ResourceType;
 import net.hypixel.api.util.Utilities;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * HypixelAPI class provides methods to interact with the Hypixel API.
+ * It supports caching and authenticated requests.
+ */
 public class HypixelAPI {
     static final String BASE_URL = "https://api.hypixel.net/v2/";
 
     protected final HypixelHttpClient httpClient;
+    protected final Cache<String, AbstractReply> cache;
+    protected final long defaultCacheTime;
 
     /**
-     * @param httpClient a {@link HypixelHttpClient} that implements the HTTP behaviour for communicating with the API
+     * Constructs a HypixelAPI instance with a custom HTTP client and default cache time.
+     *
+     * @param httpClient       the HTTP client to use for requests
+     * @param defaultCacheTime the default cache time in seconds
      */
-    public HypixelAPI(HypixelHttpClient httpClient) {
+    public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime) {
         this.httpClient = httpClient;
+        this.defaultCacheTime = defaultCacheTime;
+        this.cache = new Cache<>(defaultCacheTime, new ScheduledThreadPoolExecutor(100), 5, TimeUnit.MINUTES,15,TimeUnit.MINUTES,100);
     }
 
     /**
-     * Shuts down the {@link HypixelHttpClient}
+     * @param httpClient      the HTTP client to use for requests Example: {@code new ReactorHttpClient(UUID.fromString("your-api-key"))}
+     * @param defaultCacheTime the default cache time in seconds. This is just a convenience number for the methods that don't specify a cache time.
+     * @param maxSize        the maximum size of the cache (Request Count)
+     * @param proonTimeDelay the time between prooning the cache (Deleting old entries)
+     * @param proonTimeDelayUnit The time unit of the proon time
+     * @param proonAfter The time after which an entry is allowed to be prooned from the cache
+     * @param proonAfterTimeUnit The time unit of the proonAfter time
+     * @param executorService the executor service to use for prooning the cache
+     */
+    public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime, int maxSize, int proonTimeDelay, TimeUnit proonTimeDelayUnit, int proonAfter, TimeUnit proonAfterTimeUnit, ScheduledThreadPoolExecutor executorService) {
+        this.httpClient = httpClient;
+        this.defaultCacheTime = defaultCacheTime;
+        this.cache = new Cache<>(defaultCacheTime, executorService, proonTimeDelay, proonTimeDelayUnit, proonAfter, proonAfterTimeUnit, maxSize);
+    }
+
+
+    /**
+     * Shuts down the HTTP client.
      */
     public void shutdown() {
         httpClient.shutdown();
     }
 
+    /**
+     * Retrieves the boosters data.
+     *
+     * @return a CompletableFuture containing BoostersReply
+     */
     public CompletableFuture<BoostersReply> getBoosters() {
-        return get(true, BoostersReply.class, "boosters");
-    }
-
-    public CompletableFuture<LeaderboardsReply> getLeaderboards() {
-        return get(true, LeaderboardsReply.class, "leaderboards");
-    }
-
-    public CompletableFuture<PunishmentStatsReply> getPunishmentStats() {
-        return get(true, PunishmentStatsReply.class, "punishmentstats");
+        return get(false, BoostersReply.class, "boosters", null, defaultCacheTime);
     }
 
     /**
-     * @param player uuid of a player
-     * @return {@link CompletableFuture} containing {@link PlayerReply}
+     * Retrieves the boosters data with a specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing BoostersReply
+     */
+    public CompletableFuture<BoostersReply> getBoosters(Long maxCacheTime) {
+        return get(false, BoostersReply.class, "boosters", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves the leaderboards data.
+     *
+     * @return a CompletableFuture containing LeaderboardsReply
+     */
+    public CompletableFuture<LeaderboardsReply> getLeaderboards() {
+        return get(false, LeaderboardsReply.class, "leaderboards", null, defaultCacheTime);
+    }
+
+    /**
+     * Retrieves the leaderboards data with a specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing LeaderboardsReply
+     */
+    public CompletableFuture<LeaderboardsReply> getLeaderboards(Long maxCacheTime) {
+        return get(false, LeaderboardsReply.class, "leaderboards", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves the punishment stats.
+     *
+     * @return a CompletableFuture containing PunishmentStatsReply
+     */
+    public CompletableFuture<PunishmentStatsReply> getPunishmentStats() {
+        return get(true, PunishmentStatsReply.class, "punishmentstats", null, defaultCacheTime);
+    }
+
+    /**
+     * Retrieves the punishment stats with a specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing PunishmentStatsReply
+     */
+    public CompletableFuture<PunishmentStatsReply> getPunishmentStats(Long maxCacheTime) {
+        return get(true, PunishmentStatsReply.class, "punishmentstats", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves player data by UUID.
+     *
+     * @param player the UUID of the player
+     * @return a CompletableFuture containing PlayerReply
      */
     public CompletableFuture<PlayerReply> getPlayerByUuid(UUID player) {
-        return get(true, PlayerReply.class, "player",
-                HTTPQueryParams.create()
-                        .add("uuid", player)
-        );
+        return get(true, PlayerReply.class, "player", HTTPQueryParams.create().add("uuid", player), defaultCacheTime);
     }
 
     /**
-     * @param player uuid of a player in string format, can be both dashed or undashed.
-     * @return {@link CompletableFuture} containing {@link PlayerReply}
+     * Retrieves player data by UUID with a specified max cache time.
+     *
+     * @param player       the UUID of the player
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing PlayerReply
+     */
+    public CompletableFuture<PlayerReply> getPlayerByUuid(UUID player, Long maxCacheTime) {
+        return get(true, PlayerReply.class, "player", HTTPQueryParams.create().add("uuid", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves player data by UUID in string format.
+     *
+     * @param player the UUID of the player in string format
+     * @return a CompletableFuture containing PlayerReply
      */
     public CompletableFuture<PlayerReply> getPlayerByUuid(String player) {
-        return get(true, PlayerReply.class, "player",
-                HTTPQueryParams.create()
-                        .add("uuid", player)
-        );
+        return get(true, PlayerReply.class, "player", HTTPQueryParams.create().add("uuid", player), defaultCacheTime);
     }
 
     /**
-     * Same as {@link #getPlayerByUuid(UUID)}, but the resulting player object will only contain
-     * properties explicitly included via a {@link PropertyFilter filter}.
-     */
-    public CompletableFuture<PlayerReply> getPlayerByUuid(UUID player, PropertyFilter filter) {
-        return applyFilterFuture(getPlayerByUuid(player), filter);
-    }
-
-    /**
-     * Same as {@link #getPlayerByUuid(String)}, but the resulting player object will only contain
-     * properties explicitly included via a {@link PropertyFilter filter}.
-     */
-    public CompletableFuture<PlayerReply> getPlayerByUuid(String player, PropertyFilter filter) {
-        return applyFilterFuture(getPlayerByUuid(player), filter);
-    }
-
-    /**
-     * Same as {@link #getPlayerByName(String)}, but the resulting player object will only contain
-     * properties explicitly included via a {@link PropertyFilter filter}.
-     */
-    @Deprecated
-    public CompletableFuture<PlayerReply> getPlayerByName(String player, PropertyFilter filter) {
-        return applyFilterFuture(getPlayerByName(player), filter);
-    }
-
-    /**
-     * @param player the minecraft username of the player.
-     * @return {@link CompletableFuture} containing {@link PlayerReply}
-     * @deprecated While this method should continue functioning we recommend using the Mojang API for requesting UUID's by username.
-     * See issue <a href="https://github.com/HypixelDev/PublicAPI/issues/249#issuecomment-645634722">#249</a>
-     * This endpoint is also subject to limiting requests of the same username in a short period of time.
-     */
-    @Deprecated
-    public CompletableFuture<PlayerReply> getPlayerByName(String player) {
-        return get(true, PlayerReply.class, "player",
-                HTTPQueryParams.create()
-                        .add("name", player)
-        );
-    }
-
-    /**
-     * @param player uuid of a player
-     * @return {@link CompletableFuture} containing {@link GuildReply}
+     * Retrieves guild data by player UUID.
+     *
+     * @param player the UUID of the player
+     * @return a CompletableFuture containing GuildReply
      */
     public CompletableFuture<GuildReply> getGuildByPlayer(UUID player) {
-        return get(true, GuildReply.class, "guild",
-                HTTPQueryParams.create()
-                        .add("player", player)
-        );
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("player", player), defaultCacheTime);
     }
 
     /**
-     * @param player uuid of a player in string format, can be both dashed or undashed
-     * @return {@link CompletableFuture} containing {@link GuildReply}
+     * Retrieves guild data by player UUID with a specified max cache time.
+     *
+     * @param player       the UUID of the player
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing GuildReply
+     */
+    public CompletableFuture<GuildReply> getGuildByPlayer(UUID player, Long maxCacheTime) {
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("player", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves guild data by player UUID in string format.
+     *
+     * @param player the UUID of the player in string format
+     * @return a CompletableFuture containing GuildReply
      */
     public CompletableFuture<GuildReply> getGuildByPlayer(String player) {
-        return get(true, GuildReply.class, "guild",
-                HTTPQueryParams.create()
-                        .add("player", player)
-        );
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("player", player), defaultCacheTime);
     }
 
     /**
+     * Retrieves guild data by player UUID in string format with a specified max cache time.
+     *
+     * @param player       the UUID of the player in string format
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing GuildReply
+     */
+    public CompletableFuture<GuildReply> getGuildByPlayer(String player, Long maxCacheTime) {
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("player", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves guild data by name.
+     *
      * @param name the name of the guild
-     * @return {@link CompletableFuture} containing {@link GuildReply}
+     * @return a CompletableFuture containing GuildReply
      */
     public CompletableFuture<GuildReply> getGuildByName(String name) {
-        return get(true, GuildReply.class, "guild",
-                HTTPQueryParams.create()
-                        .add("name", name)
-        );
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("name", name), defaultCacheTime);
     }
 
     /**
-     * @param id mongo id hex string
-     * @return {@link CompletableFuture} containing {@link GuildReply}
+     * Retrieves guild data by name with a specified max cache time.
+     *
+     * @param name         the name of the guild
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing GuildReply
+     */
+    public CompletableFuture<GuildReply> getGuildByName(String name, Long maxCacheTime) {
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("name", name), maxCacheTime);
+    }
+
+    /**
+     * Retrieves guild data by ID.
+     *
+     * @param id the ID of the guild
+     * @return a CompletableFuture containing GuildReply
      */
     public CompletableFuture<GuildReply> getGuildById(String id) {
-        return get(true, GuildReply.class, "guild",
-                HTTPQueryParams.create()
-                        .add("id", id)
-        );
-    }
-
-    public CompletableFuture<CountsReply> getCounts() {
-        return get(true, CountsReply.class, "counts");
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("id", id), defaultCacheTime);
     }
 
     /**
-     * Gets the current status of the player with information about the server they are in
-     * at that moment.
-     * In case the person is in limbo, result will be the last known server
+     * Retrieves guild data by ID with a specified max cache time.
      *
-     * @param uuid of player
-     * @return {@link CompletableFuture} containing {@link StatusReply}
+     * @param id           the ID of the guild
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing GuildReply
+     */
+    public CompletableFuture<GuildReply> getGuildById(String id, Long maxCacheTime) {
+        return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("id", id), maxCacheTime);
+    }
+
+    /**
+     * Retrieves the counts data.
+     *
+     * @return a CompletableFuture containing CountsReply
+     */
+    public CompletableFuture<CountsReply> getCounts() {
+        return get(true, CountsReply.class, "counts", null, defaultCacheTime);
+    }
+
+    /**
+     * Retrieves the counts data with a specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing CountsReply
+     */
+    public CompletableFuture<CountsReply> getCounts(Long maxCacheTime) {
+        return get(true, CountsReply.class, "counts", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves the status of a player by UUID.
+     *
+     * @param uuid the UUID of the player
+     * @return a CompletableFuture containing StatusReply
      */
     public CompletableFuture<StatusReply> getStatus(UUID uuid) {
-        return get(true, StatusReply.class, "status",
-                HTTPQueryParams.create()
-                        .add("uuid", uuid)
-        );
+        return get(true, StatusReply.class, "status", HTTPQueryParams.create().add("uuid", uuid), defaultCacheTime);
     }
 
     /**
-     * Gets up to 100 of the player's most recently played games. Games are removed from this list after 3 days.
+     * Retrieves the status of a player by UUID with a specified max cache time.
      *
-     * @param uuid of player
-     * @return {@link CompletableFuture} containing {@link RecentGamesReply}
+     * @param uuid         the UUID of the player
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing StatusReply
+     */
+    public CompletableFuture<StatusReply> getStatus(UUID uuid, Long maxCacheTime) {
+        return get(true, StatusReply.class, "status", HTTPQueryParams.create().add("uuid", uuid), maxCacheTime);
+    }
+
+    /**
+     * Retrieves recent games of a player by UUID.
+     *
+     * @param uuid the UUID of the player
+     * @return a CompletableFuture containing RecentGamesReply
      */
     public CompletableFuture<RecentGamesReply> getRecentGames(UUID uuid) {
-        return get(true, RecentGamesReply.class, "recentGames",
-                HTTPQueryParams.create()
-                        .add("uuid", uuid)
-        );
+        return get(true, RecentGamesReply.class, "recentGames", HTTPQueryParams.create().add("uuid", uuid), defaultCacheTime);
     }
 
     /**
-     * Retrieve resources which don't change often.
+     * Retrieves recent games of a player by UUID with a specified max cache time.
      *
-     * @param resource to be requested
-     * @return {@link CompletableFuture} containing {@link ResourceReply}
+     * @param uuid         the UUID of the player
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing RecentGamesReply
+     */
+    public CompletableFuture<RecentGamesReply> getRecentGames(UUID uuid, Long maxCacheTime) {
+        return get(true, RecentGamesReply.class, "recentGames", HTTPQueryParams.create().add("uuid", uuid), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock garden data by profile.
+     *
+     * @param profile the profile ID
+     * @return a CompletableFuture containing SkyBlockGardenReply
+     */
+    public CompletableFuture<SkyBlockGardenReply> getSkyBlockGarden(String profile) {
+        return get(true, SkyBlockGardenReply.class, "skyblock/garden", HTTPQueryParams.create().add("profile", profile), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock garden data by profile with a specified max cache time.
+     *
+     * @param profile      the profile ID
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockGardenReply
+     */
+    public CompletableFuture<SkyBlockGardenReply> getSkyBlockGarden(String profile, Long maxCacheTime) {
+        return get(true, SkyBlockGardenReply.class, "skyblock/garden", HTTPQueryParams.create().add("profile", profile), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock museum data by profile.
+     *
+     * @param profile the profile ID
+     * @return a CompletableFuture containing SkyBlockMuseumReply
+     */
+    public CompletableFuture<SkyBlockMuseumReply> getSkyblockMuseum(String profile) {
+        return get(true, SkyBlockMuseumReply.class, "skyblock/museum", HTTPQueryParams.create().add("profile", profile), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock museum data by profile with a specified max cache time.
+     *
+     * @param profile      the profile ID
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockMuseumReply
+     */
+    public CompletableFuture<SkyBlockMuseumReply> getSkyblockMuseum(String profile, Long maxCacheTime) {
+        return get(true, SkyBlockMuseumReply.class, "skyblock/museum", HTTPQueryParams.create().add("profile", profile), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock profile data by profile.
+     *
+     * @param profile the profile ID
+     * @return a CompletableFuture containing SkyBlockProfileReply
+     */
+    public CompletableFuture<SkyBlockProfileReply> getSkyBlockProfile(String profile) {
+        return get(true, SkyBlockProfileReply.class, "skyblock/profile", HTTPQueryParams.create().add("profile", profile), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock profile data by profile with a specified max cache time.
+     *
+     * @param profile      the profile ID
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockProfileReply
+     */
+    public CompletableFuture<SkyBlockProfileReply> getSkyBlockProfile(String profile, Long maxCacheTime) {
+        return get(true, SkyBlockProfileReply.class, "skyblock/profile", HTTPQueryParams.create().add("profile", profile), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock profiles data by player UUID.
+     *
+     * @param player the UUID of the player
+     * @return a CompletableFuture containing SkyBlockProfilesReply
+     */
+    public CompletableFuture<SkyBlockProfilesReply> getSkyBlockProfiles(UUID player) {
+        return get(true, SkyBlockProfilesReply.class, "skyblock/profiles", HTTPQueryParams.create().add("uuid", player), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock profiles data by player UUID with a specified max cache time.
+     *
+     * @param player       the UUID of the player
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockProfilesReply
+     */
+    public CompletableFuture<SkyBlockProfilesReply> getSkyBlockProfiles(UUID player, Long maxCacheTime) {
+        return get(true, SkyBlockProfilesReply.class, "skyblock/profiles", HTTPQueryParams.create().add("uuid", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock profiles data by player UUID in string format.
+     *
+     * @param player the UUID of the player in string format
+     * @return a CompletableFuture containing SkyBlockProfilesReply
+     */
+    public CompletableFuture<SkyBlockProfilesReply> getSkyBlockProfiles(String player) {
+        return get(true, SkyBlockProfilesReply.class, "skyblock/profiles", HTTPQueryParams.create().add("uuid", player), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock profiles data by player UUID in string format with a specified max cache time.
+     *
+     * @param player       the UUID of the player in string format
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockProfilesReply
+     */
+    public CompletableFuture<SkyBlockProfilesReply> getSkyBlockProfiles(String player, Long maxCacheTime) {
+        return get(true, SkyBlockProfilesReply.class, "skyblock/profiles", HTTPQueryParams.create().add("uuid", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock bingo data by player UUID.
+     *
+     * @param player the UUID of the player
+     * @return a CompletableFuture containing SkyBlockBingoDataReply
+     */
+    public CompletableFuture<SkyBlockBingoDataReply> getSkyblockBingoData(UUID player) {
+        return get(true, SkyBlockBingoDataReply.class, "skyblock/bingo", HTTPQueryParams.create().add("uuid", player), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock bingo data by player UUID with a specified max cache time.
+     *
+     * @param player       the UUID of the player
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockBingoDataReply
+     */
+    public CompletableFuture<SkyBlockBingoDataReply> getSkyblockBingoData(UUID player, Long maxCacheTime) {
+        return get(true, SkyBlockBingoDataReply.class, "skyblock/bingo", HTTPQueryParams.create().add("uuid", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock bingo data by player UUID in string format.
+     *
+     * @param player the UUID of the player in string format
+     * @return a CompletableFuture containing SkyBlockBingoDataReply
+     */
+    public CompletableFuture<SkyBlockBingoDataReply> getSkyblockBingoData(String player) {
+        return get(true, SkyBlockBingoDataReply.class, "skyblock/bingo", HTTPQueryParams.create().add("uuid", player), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock bingo data by player UUID in string format with a specified max cache time.
+     *
+     * @param player       the UUID of the player in string format
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing SkyBlockBingoDataReply
+     */
+    public CompletableFuture<SkyBlockBingoDataReply> getSkyblockBingoData(String player, Long maxCacheTime) {
+        return get(true, SkyBlockBingoDataReply.class, "skyblock/bingo", HTTPQueryParams.create().add("uuid", player), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock news with default cache time.
+     *
+     * @return a CompletableFuture containing the SkyBlockNewsReply
+     */
+    public CompletableFuture<SkyBlockNewsReply> getSkyBlockNews() {
+        return get(true, SkyBlockNewsReply.class, "skyblock/news", null, defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock news with specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing the SkyBlockNewsReply
+     */
+    public CompletableFuture<SkyBlockNewsReply> getSkyBlockNews(Long maxCacheTime) {
+        return get(true, SkyBlockNewsReply.class, "skyblock/news", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock auctions for a specific page with default cache time.
+     *
+     * @param page the page number to retrieve
+     * @return a CompletableFuture containing the SkyBlockAuctionsReply
+     */
+    public CompletableFuture<SkyBlockAuctionsReply> getSkyBlockAuctions(int page) {
+        return get(false, SkyBlockAuctionsReply.class, "skyblock/auctions", HTTPQueryParams.create().add("page", page), defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock auctions for a specific page with specified max cache time.
+     *
+     * @param page         the page number to retrieve
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing the SkyBlockAuctionsReply
+     */
+    public CompletableFuture<SkyBlockAuctionsReply> getSkyBlockAuctions(int page, Long maxCacheTime) {
+        return get(false, SkyBlockAuctionsReply.class, "skyblock/auctions", HTTPQueryParams.create().add("page", page), maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock bazaar data with default cache time.
+     *
+     * @return a CompletableFuture containing the SkyBlockBazaarReply
+     */
+    public CompletableFuture<SkyBlockBazaarReply> getSkyBlockBazaar() {
+        return get(false, SkyBlockBazaarReply.class, "skyblock/bazaar", null, defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock bazaar data with specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing the SkyBlockBazaarReply
+     */
+    public CompletableFuture<SkyBlockBazaarReply> getSkyBlockBazaar(Long maxCacheTime) {
+        return get(false, SkyBlockBazaarReply.class, "skyblock/bazaar", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock fire sales data with default cache time.
+     *
+     * @return a CompletableFuture containing the SkyBlockFireSalesReply
+     */
+    public CompletableFuture<SkyBlockFireSalesReply> getSkyBlockFireSales() {
+        return get(false, SkyBlockFireSalesReply.class, "skyblock/firesales", null, defaultCacheTime);
+    }
+
+    /**
+     * Retrieves SkyBlock fire sales data with specified max cache time.
+     *
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing the SkyBlockFireSalesReply
+     */
+    public CompletableFuture<SkyBlockFireSalesReply> getSkyBlockFireSales(Long maxCacheTime) {
+        return get(false, SkyBlockFireSalesReply.class, "skyblock/firesales", null, maxCacheTime);
+    }
+
+    /**
+     * Retrieves a resource by its type with a default cache time of 10 seconds.
+     *
+     * @param resource the resource type to retrieve
+     * @return a CompletableFuture containing the ResourceReply
      */
     public CompletableFuture<ResourceReply> getResource(ResourceType resource) {
         return getResource(resource.getPath());
     }
 
+    /**
+     * Retrieves a resource by its path with a default cache time of 10 seconds.
+     *
+     * @param resource the resource path to retrieve
+     * @return a CompletableFuture containing the ResourceReply
+     */
     public CompletableFuture<ResourceReply> getResource(String resource) {
-        return requestResource(resource);
+        return requestResource(resource, 10L);
     }
 
+    /**
+     * Retrieves the pet repository.
+     *
+     * @return a CompletableFuture containing the IPetRepository
+     */
     public CompletableFuture<IPetRepository> getPetRepository() {
         return getResource(ResourceType.VANITY_PETS)
                 .thenApply(PetRepositoryImpl::new);
     }
 
     /**
-     * @param profile Profile ID of which you are requesting the Garden for.
-     * @return the future
-     */
-    public CompletableFuture<SkyBlockGardenReply> getSkyBlockGarden(String profile) {
-        return get(true, SkyBlockGardenReply.class, "skyblock/garden",
-                HTTPQueryParams.create()
-                        .add("profile", profile)
-        );
-    }
-
-    /**
-     * @param profile Profile ID of which you are requesting the Museum for.
-     * @return the future
-     */
-    public CompletableFuture<SkyBlockMuseumReply> getSkyblockMuseum(String profile) {
-        return get(true, SkyBlockMuseumReply.class, "skyblock/museum",
-                HTTPQueryParams.create()
-                        .add("profile", profile)
-        );
-    }
-
-    public CompletableFuture<SkyBlockProfileReply> getSkyBlockProfile(String profile) {
-        return get(true, SkyBlockProfileReply.class, "skyblock/profile",
-                HTTPQueryParams.create()
-                        .add("profile", profile)
-        );
-    }
-
-    /**
-     * @param player uuid of a player.
-     * @return the future
-     */
-    public CompletableFuture<SkyBlockProfilesReply> getSkyBlockProfiles(UUID player) {
-        return get(true, SkyBlockProfilesReply.class, "skyblock/profiles",
-                HTTPQueryParams.create()
-                        .add("uuid", player)
-        );
-    }
-
-    /**
-     * @param player uuid of a player in string format, can be both dashed or undashed.
-     * @return the future
-     */
-    public CompletableFuture<SkyBlockProfilesReply> getSkyBlockProfiles(String player) {
-        return get(true, SkyBlockProfilesReply.class, "skyblock/profiles",
-                HTTPQueryParams.create()
-                        .add("uuid", player)
-        );
-    }
-
-    /**
-     * Request the bingo data of a provided player. See <a href="https://api.hypixel.net/#tag/SkyBlock/paths/~1skyblock~1bingo/get">/skyblock/bingo</a>
+     * Requests a resource with a specified max cache time.
      *
-     * @param player uuid of a player.
-     * @return CompletableFuture containing a {@link SkyBlockBingoDataReply}
+     * @param resource     the resource path to retrieve
+     * @param maxCacheTime the maximum cache time in seconds
+     * @return a CompletableFuture containing the ResourceReply
      */
-    public CompletableFuture<SkyBlockBingoDataReply> getSkyblockBingoData(UUID player) {
-        return get(true, SkyBlockBingoDataReply.class, "skyblock/bingo",
-                HTTPQueryParams.create()
-                        .add("uuid", player)
-        );
+    protected CompletableFuture<ResourceReply> requestResource(String resource, Long maxCacheTime) {
+        return get(false, ResourceReply.class, "resources/" + resource, null, maxCacheTime);
     }
 
     /**
-     * Request the bingo data of a provided player. See <a href="https://api.hypixel.net/#tag/SkyBlock/paths/~1skyblock~1bingo/get">/skyblock/bingo</a>
+     * Checks the HTTP response for errors and returns the response if successful.
      *
-     * @param player uuid of a player in string format, can be both dashed or undashed.
-     * @return CompletableFuture containing a {@link SkyBlockBingoDataReply}
-     */
-    public CompletableFuture<SkyBlockBingoDataReply> getSkyblockBingoData(String player) {
-        return get(true, SkyBlockBingoDataReply.class, "skyblock/bingo",
-                HTTPQueryParams.create()
-                        .add("uuid", player)
-        );
-    }
-
-    public CompletableFuture<SkyBlockNewsReply> getSkyBlockNews() {
-        return get(true, SkyBlockNewsReply.class, "skyblock/news");
-    }
-
-    public CompletableFuture<SkyBlockAuctionsReply> getSkyBlockAuctions(int page) {
-        return get(false, SkyBlockAuctionsReply.class, "skyblock/auctions",
-                HTTPQueryParams.create()
-                        .add("page", page)
-        );
-    }
-
-    /**
-     * Requests information about products in bazaar.
-     *
-     * @return {@link CompletableFuture} containing {@link SkyBlockBazaarReply}
-     */
-    public CompletableFuture<SkyBlockBazaarReply> getSkyBlockBazaar() {
-        return get(false, SkyBlockBazaarReply.class, "skyblock/bazaar");
-    }
-
-    public CompletableFuture<SkyBlockFireSalesReply> getSkyBlockFireSales() {
-        return get(false, SkyBlockFireSalesReply.class, "skyblock/firesales");
-    }
-
-    /**
-     * Applies a {@code filter} to a player object when it is received in an API response.
-     */
-    private CompletableFuture<PlayerReply> applyFilterFuture(CompletableFuture<PlayerReply> future, PropertyFilter filter) {
-        return future.thenApply(reply -> {
-            reply.getPlayer().filter(filter);
-            return reply;
-        });
-    }
-
-    protected  <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request) {
-        return get(authenticated, clazz, request, null);
-    }
-
-    protected <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request, HTTPQueryParams params) {
-        String url = BASE_URL + request;
-        if (params != null) {
-            url = params.getAsQueryString(url);
-        }
-
-        CompletableFuture<HypixelHttpResponse> future = authenticated ? httpClient.makeAuthenticatedRequest(url) : httpClient.makeRequest(url);
-        return future
-                .thenApply(this::checkResponse)
-                .thenApply(response -> {
-                    if (clazz == ResourceReply.class) {
-                        return checkReply((R) new ResourceReply(Utilities.GSON.fromJson(response.getBody(), JsonObject.class)));
-                    }
-
-                    R reply = Utilities.GSON.fromJson(response.getBody(), clazz);
-                    if (reply instanceof RateLimitedReply) {
-                        ((RateLimitedReply) reply).setRateLimit(response.getRateLimit());
-                    }
-
-                    return checkReply(reply);
-                });
-    }
-
-    protected CompletableFuture<ResourceReply> requestResource(String resource) {
-        return httpClient.makeRequest(BASE_URL + "resources/" + resource)
-                .thenApply(this::checkResponse)
-                .thenApply(response -> checkReply(new ResourceReply(Utilities.GSON.fromJson(response.getBody(), JsonObject.class))));
-    }
-
-    /**
-     * Checks the status of the response and throws an exception if needed
+     * @param response the HTTP response to check
+     * @return the HypixelHttpResponse if the status code is 200
+     * @throws BadStatusCodeException if the status code is not 200
      */
     protected HypixelHttpResponse checkResponse(HypixelHttpResponse response) {
         if (response.getStatusCode() == 200) {
@@ -371,11 +591,12 @@ public class HypixelAPI {
     }
 
     /**
-     * Checks reply and throws appropriate exceptions based on it's content
+     * Checks the reply for errors and returns the reply if successful.
      *
-     * @param reply The reply to check
-     * @param <T>   The class of the reply
-     * @return the same object that was provided for cleaner usage
+     * @param reply the reply to check
+     * @param <T>   the type of the reply
+     * @return the reply if successful
+     * @throws BadResponseException if the reply is not successful
      */
     protected <T extends AbstractReply> T checkReply(T reply) {
         if (reply != null) {
@@ -384,5 +605,50 @@ public class HypixelAPI {
             }
         }
         return reply;
+    }
+
+    /**
+     * Makes an HTTP request and retrieves the response, optionally using authentication and caching.
+     *
+     * @param authenticated whether to use authentication for the request
+     * @param clazz         the class of the reply
+     * @param request       the request path
+     * @param params        the query parameters
+     * @param maxCacheTime  the maximum cache time in seconds
+     * @param <R>           the type of the reply
+     * @return a CompletableFuture containing the reply
+     */
+    protected <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request, HTTPQueryParams params, Long maxCacheTime) {
+        String cacheKey = request + (params != null ? params.toString() : "");
+        if (maxCacheTime != null) {
+            R cachedReply = (R) cache.get(cacheKey, maxCacheTime);
+            if (cachedReply != null) {
+                return CompletableFuture.completedFuture(cachedReply);
+            }
+        }
+
+        String url = BASE_URL + request;
+        if (params != null) {
+            url = params.getAsQueryString(url);
+        }
+
+        CompletableFuture<HypixelHttpResponse> future = authenticated ? httpClient.makeAuthenticatedRequest(url) : httpClient.makeRequest(url);
+        return future
+                .thenApply(this::checkResponse)
+                .thenApply(response -> {
+                    R reply;
+                    if (clazz == ResourceReply.class) {
+                        reply= checkReply((R) new ResourceReply(Utilities.GSON.fromJson(response.getBody(), JsonObject.class)));
+                    }
+                    else {
+                        R tempReply = Utilities.GSON.fromJson(response.getBody(), clazz);
+                        if (tempReply instanceof RateLimitedReply) {
+                            ((RateLimitedReply) tempReply).setRateLimit(response.getRateLimit());
+                        }
+                        reply = checkReply(tempReply);
+                    }
+                    cache.put(cacheKey, reply);
+                    return reply;
+                });
     }
 }

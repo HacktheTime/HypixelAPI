@@ -45,6 +45,18 @@
             <version>5.9.3</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.5.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.hypixel</groupId>
+            <artifactId>hypixel-api-transport-reactor</artifactId>
+            <version>4.4</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>
