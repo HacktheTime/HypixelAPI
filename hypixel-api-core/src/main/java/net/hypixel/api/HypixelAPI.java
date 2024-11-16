@@ -31,7 +31,7 @@ public class HypixelAPI {
 
     protected final HypixelHttpClient httpClient;
     protected final Cache<String, AbstractReply> cache;
-    protected final long defaultCacheTime;
+    protected final Long defaultCacheTime;
 
     /**
      * Constructs a HypixelAPI instance with a custom HTTP client and default cache time.
@@ -39,11 +39,12 @@ public class HypixelAPI {
      * @param httpClient       the HTTP client to use for requests
      * @param defaultCacheTime the default cache time in seconds
      */
-    public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime) {
+    public HypixelAPI(HypixelHttpClient httpClient, Long defaultCacheTime) {
         this(httpClient, defaultCacheTime, 100, 5, TimeUnit.MINUTES, 15, TimeUnit.MINUTES, new ScheduledThreadPoolExecutor(100));
     }
 
     /**
+     * Most parameters can be ignored if you dont want a cache. call the {@link #HypixelAPI(HypixelHttpClient client))}
      * @param httpClient         the HTTP client to use for requests Example: {@code new ReactorHttpClient(UUID.fromString("your-api-key"))}
      * @param defaultCacheTime   the default cache time in seconds. This is just a convenience number for the methods that don't specify a cache time.
      * @param maxSize            the maximum size of the cache (Request Count)
@@ -57,7 +58,11 @@ public class HypixelAPI {
         this(httpClient, defaultCacheTime, new Cache<>(defaultCacheTime, executorService, proonTimeDelay, proonTimeDelayUnit, proonAfter, proonAfterTimeUnit, maxSize));
     }
 
-    public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime, Cache<String, AbstractReply> cache) {
+    public HypixelAPI(HypixelHttpClient httpClient) {
+        this(httpClient,null,null);
+    }
+
+    public HypixelAPI(HypixelHttpClient httpClient, Long defaultCacheTime, Cache<String, AbstractReply> cache) {
         this.httpClient = httpClient;
         this.defaultCacheTime = defaultCacheTime;
         this.cache = cache;
@@ -622,10 +627,12 @@ public class HypixelAPI {
      */
     protected <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request, HTTPQueryParams params, Long maxCacheTime) {
         String cacheKey = request + (params != null ? params.toString() : "");
-        if (maxCacheTime != null) {
-            R cachedReply = (R) cache.get(cacheKey, maxCacheTime);
-            if (maxCacheTime == -1 || cachedReply != null) {
-                return CompletableFuture.completedFuture(cachedReply);
+        if (cache != null) {
+            if (maxCacheTime != null) {
+                R cachedReply = (R) cache.get(cacheKey, maxCacheTime);
+                if (maxCacheTime == -1 || cachedReply != null) {
+                    return CompletableFuture.completedFuture(cachedReply);
+                }
             }
         }
 
@@ -649,7 +656,7 @@ public class HypixelAPI {
                         }
                         reply = checkReply(tempReply);
                     }
-                    cache.put(cacheKey, reply);
+                    if (cache != null) cache.put(cacheKey, reply);
                     return reply;
                 });
     }
