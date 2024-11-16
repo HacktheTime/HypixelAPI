@@ -616,15 +616,15 @@ public class HypixelAPI {
      * @param clazz         the class of the reply
      * @param request       the request path
      * @param params        the query parameters
-     * @param maxCacheTime  the maximum cache time in seconds
+     * @param maxCacheTime  the maximum cache time in seconds | null = always fresh | -1 = cache or null
      * @param <R>           the type of the reply
-     * @return a CompletableFuture containing the reply
+     * @return a CompletableFuture containing the reply. or null if not in cache and cache only
      */
     protected <R extends AbstractReply> CompletableFuture<R> get(boolean authenticated, Class<R> clazz, String request, HTTPQueryParams params, Long maxCacheTime) {
         String cacheKey = request + (params != null ? params.toString() : "");
         if (maxCacheTime != null) {
             R cachedReply = (R) cache.get(cacheKey, maxCacheTime);
-            if (cachedReply != null) {
+            if (maxCacheTime == -1 || cachedReply != null) {
                 return CompletableFuture.completedFuture(cachedReply);
             }
         }
