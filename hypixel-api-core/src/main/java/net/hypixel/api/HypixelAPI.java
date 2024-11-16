@@ -40,25 +40,27 @@ public class HypixelAPI {
      * @param defaultCacheTime the default cache time in seconds
      */
     public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime) {
-        this.httpClient = httpClient;
-        this.defaultCacheTime = defaultCacheTime;
-        this.cache = new Cache<>(defaultCacheTime, new ScheduledThreadPoolExecutor(100), 5, TimeUnit.MINUTES,15,TimeUnit.MINUTES,100);
+        this(httpClient, defaultCacheTime, 100, 5, TimeUnit.MINUTES, 15, TimeUnit.MINUTES, new ScheduledThreadPoolExecutor(100));
     }
 
     /**
-     * @param httpClient      the HTTP client to use for requests Example: {@code new ReactorHttpClient(UUID.fromString("your-api-key"))}
-     * @param defaultCacheTime the default cache time in seconds. This is just a convenience number for the methods that don't specify a cache time.
-     * @param maxSize        the maximum size of the cache (Request Count)
-     * @param proonTimeDelay the time between prooning the cache (Deleting old entries)
+     * @param httpClient         the HTTP client to use for requests Example: {@code new ReactorHttpClient(UUID.fromString("your-api-key"))}
+     * @param defaultCacheTime   the default cache time in seconds. This is just a convenience number for the methods that don't specify a cache time.
+     * @param maxSize            the maximum size of the cache (Request Count)
+     * @param proonTimeDelay     the time between prooning the cache (Deleting old entries)
      * @param proonTimeDelayUnit The time unit of the proon time
-     * @param proonAfter The time after which an entry is allowed to be prooned from the cache
+     * @param proonAfter         The time after which an entry is allowed to be prooned from the cache
      * @param proonAfterTimeUnit The time unit of the proonAfter time
-     * @param executorService the executor service to use for prooning the cache
+     * @param executorService    the executor service to use for prooning the cache
      */
     public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime, int maxSize, int proonTimeDelay, TimeUnit proonTimeDelayUnit, int proonAfter, TimeUnit proonAfterTimeUnit, ScheduledThreadPoolExecutor executorService) {
+        this(httpClient, defaultCacheTime, new Cache<>(defaultCacheTime, executorService, proonTimeDelay, proonTimeDelayUnit, proonAfter, proonAfterTimeUnit, maxSize));
+    }
+
+    public HypixelAPI(HypixelHttpClient httpClient, long defaultCacheTime, Cache<String, AbstractReply> cache) {
         this.httpClient = httpClient;
         this.defaultCacheTime = defaultCacheTime;
-        this.cache = new Cache<>(defaultCacheTime, executorService, proonTimeDelay, proonTimeDelayUnit, proonAfter, proonAfterTimeUnit, maxSize);
+        this.cache = cache;
     }
 
 
@@ -638,7 +640,7 @@ public class HypixelAPI {
                 .thenApply(response -> {
                     R reply;
                     if (clazz == ResourceReply.class) {
-                        reply= checkReply((R) new ResourceReply(Utilities.GSON.fromJson(response.getBody(), JsonObject.class)));
+                        reply = checkReply((R) new ResourceReply(Utilities.GSON.fromJson(response.getBody(), JsonObject.class)));
                     }
                     else {
                         R tempReply = Utilities.GSON.fromJson(response.getBody(), clazz);
