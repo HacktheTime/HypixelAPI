@@ -13,7 +13,7 @@ public enum ResourceType {
     SKYBLOCK_ITEMS("skyblock/items"),
     SKYBLOCK_ELECTION("skyblock/election"),
     SKYBLOCK_BINGO("skyblock/bingo"),
-    ;
+    RESOURCE_PACKS("resourcepacks"),;
 
     /**
      * Path to resource

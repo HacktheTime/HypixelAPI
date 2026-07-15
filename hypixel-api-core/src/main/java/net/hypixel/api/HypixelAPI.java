@@ -161,6 +161,11 @@ public class HypixelAPI {
         return get(true, CountsReply.class, "counts");
     }
 
+    public CompletableFuture<ResourcePackReply> getResourcePacks() {
+        return get(false, ResourcePackReply.class, "resources/packs",null, 5L);
+    }
+
+
     /**
      * Gets the current status of the player with information about the server they are in
      * at that moment.
