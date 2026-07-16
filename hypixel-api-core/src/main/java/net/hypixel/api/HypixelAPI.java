@@ -237,6 +237,11 @@ public class HypixelAPI {
         return get(true, GuildReply.class, "guild", HTTPQueryParams.create().add("id", id), defaultCacheTime);
     }
 
+    public CompletableFuture<ResourcePackReply> getResourcePacks() {
+        return get(false, ResourcePackReply.class, "resources/packs",null, 5L);
+    }
+
+
     /**
      * Retrieves guild data by ID with a specified max cache time.
      *
