@@ -21,7 +21,7 @@ public class ExampleUtil {
     public static final HypixelAPI API;
 
     static {
-        API = new HypixelAPI(new ApacheHttpClient(UUID.fromString(getApiKey())), 10*60);
+        API = new HypixelAPI(new ApacheHttpClient(UUID.fromString(getApiKey())), 10*60L);
     }
 
     public static final UUID HYPIXEL = UUID.fromString("f7c77d99-9f15-4a66-a87d-c4a51ef30d19");

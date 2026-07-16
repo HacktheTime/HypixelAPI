@@ -29,7 +29,7 @@ public class HypixelAPITest {
     @BeforeEach
     public void setUp() {
         httpClient = Mockito.mock(ReactorHttpClient.class, withSettings().useConstructor(UUID.fromString(getKey())).defaultAnswer(CALLS_REAL_METHODS));
-        hypixelAPI = new HypixelAPI(httpClient, 60);
+        hypixelAPI = new HypixelAPI(httpClient, 60L);
         cache = new Cache<>(60, new ScheduledThreadPoolExecutor(100),10, TimeUnit.MINUTES,10,TimeUnit.MINUTES,100);
     }
 
