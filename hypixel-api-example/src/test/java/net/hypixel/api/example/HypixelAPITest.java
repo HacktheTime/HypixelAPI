@@ -3,9 +3,7 @@ package net.hypixel.api.example;
 import net.hypixel.api.HypixelAPI;
 import net.hypixel.api.cache.Cache;
 import net.hypixel.api.http.HypixelHttpClient;
-import net.hypixel.api.http.HypixelHttpResponse;
 import net.hypixel.api.reactor.ReactorHttpClient;
-import net.hypixel.api.reply.CountsReply;
 import net.hypixel.api.reply.CountsReply;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +16,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 public class HypixelAPITest {
